@@ -5,6 +5,7 @@ import random
 from utils import *
 from classifiers import *
 from preprocess import  preprocess
+import sys
 
 seed = 42
 random.seed(seed)
@@ -54,16 +55,17 @@ if __name__ == "__main__":
                                                             X_test, 
                                                             analyzer=args.analyzer, 
                                                             max_features=args.voc_size)
-
+    print("rarau: ", X_train_raw)
     print('========')
     print('Number of tokens in the vocabulary:', len(features))
     print('Coverage: ', compute_coverage(features, X_test.values, analyzer=args.analyzer))
     print('========')
 
-
     #Apply Classifier  
     X_train, X_test = normalizeData(X_train_raw, X_test_raw)
+
     y_predict = applyNaiveBayes(X_train, y_train, X_test)
+    # y_predict = applySVM(X_train, y_train, X_test)
     
     print('========')
     print('Prediction Results:')    

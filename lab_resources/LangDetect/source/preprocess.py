@@ -1,10 +1,11 @@
+import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
-
-# nltk.download('punkt')
-# nltk.download('stopwords')
-# nltk.download('wordnet')
+import sys
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
 
 #Tokenizer function. You can add here different preprocesses.
 def preprocess(sentences, labels):
@@ -28,13 +29,25 @@ def preprocess(sentences, labels):
     for sentence, label in zip(sentences, labels):
         tokens = word_tokenize(sentence)
 
-        stop_words = set(stopwords.words(labels))
+        # stop_words = set(stopwords.words(label))
 
         # Convertir a minúsculas y lematización
-        tokens = [lemmatizer.lemmatize(word.lower()) for word in tokens if word.isalpha() and word.lower() not in stop_words]
+        tokens = [lemmatizer.lemmatize(word.lower()) for word in tokens if word.isalpha()]
 
         # Agregar los tokens preprocesados y el label correspondiente
         preprocessed_sentences.append(tokens)
         preprocessed_labels.append(label)
-
     return preprocessed_sentences, preprocessed_labels
+
+# #Tokenizer function. You can add here different preprocesses.
+# def preprocess(sentences, labels):
+#     return sentences, labels
+
+# ("sent 1. sentx  asdasdasd","sent 2 asdasdasd")
+# ("sent 1.") => [sent,1,.]
+# " ".join()
+
+# pd.series()
+
+
+

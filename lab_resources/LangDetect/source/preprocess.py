@@ -1,3 +1,18 @@
+"""
+preprocess.py:  In this file, you should add all preprocessing steps before
+computing features from the data.  Some suggestions of steps that you can
+apply are sentence splitting, tokenization, remove punctuation, lemmatization,
+or any ad hoc step of your choice.
+
+Some of the processes may be language-specific. As this information is our
+label, we can not use this information in our preprocessing steps. All steps
+must be applied equally to all sentences, or based on features you can extract
+from the sentences only.
+
+Some steps may affect the number of sentences, In those cases you would
+have to implement the required measures to modify the labels accordingly.
+"""
+
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize

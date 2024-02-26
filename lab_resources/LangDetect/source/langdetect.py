@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import random
 from utils import *
 from classifiers import *
-from preprocess import  preprocess
+from preprocess import  *
 import sys
 
 seed = 42
@@ -47,8 +47,8 @@ if __name__ == "__main__":
     
     # Preprocess text (Word granularity only)
     if args.analyzer == 'word':
-        X_train, y_train = preprocess(X_train,y_train)
-        X_test, y_test = preprocess(X_test,y_test)
+        X_train, y_train = preprocess2(X_train,y_train)
+        X_test, y_test = preprocess2(X_test,y_test)
 
     #Compute text features
     features, X_train_raw, X_test_raw = compute_features(X_train, 

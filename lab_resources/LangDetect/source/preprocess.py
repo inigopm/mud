@@ -21,6 +21,27 @@ import sys
 import pandas as pd
 import re
 import simplemma
+import fasttext
+import time
+import spacy
+
+# Carga el modelo de detección de idioma
+model = fasttext.load_model('lid.176.bin')
+
+def detect_language_fasttext(text):
+    print(text)
+    predictions = model.predict(text, k=1)  # k=1 significa obtener la mejor predicción
+    return predictions[0][0].replace('__label__', '')  # Limpia la salida para obtener solo el código del idioma
+
+def safe_detect_language(sentence, default='en'):
+    try:
+        # Suponiendo que detect_language_fasttext devuelve el código de idioma
+        return detect_language_fasttext(sentence)
+    except Exception as e:
+        print(f"Error detecting language: {e}")
+        # Devuelve un código de idioma predeterminado o None si hay un error
+        return default
+
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -51,6 +72,37 @@ language_codes = {
     'Swedish': 'sv'
 }
 
+
+nlp_models = {
+    'en': "en_core_web_sm",     # English
+    'id': "xx_ent_wiki_sm",     # Indonesian - Multi-language
+    'tr': "xx_ent_wiki_sm",     # Turkish - Multi-language
+    'ar': "xx_ent_wiki_sm",     # Arabic - Multi-language
+    'ro': "ro_core_news_sm",    # Romanian
+    'fa': "xx_ent_wiki_sm",     # Persian - Multi-language
+    'es': "es_core_news_sm",    # Spanish
+    'sv': "sv_core_news_sm",    # Swedish
+    'et': "xx_ent_wiki_sm",     # Estonian - Multi-language
+    'ko': "ko_core_news_sm",    # Korean
+    'ru': "ru_core_news_sm",    # Russian
+    'th': "xx_ent_wiki_sm",     # Thai - Multi-language
+    'pt': "pt_core_news_sm",    # Portuguese
+    'nl': 'nl_core_news_sm',    # Dutch
+    'zh': 'zh_core_web_sm',     # Chinese
+    'ta': "xx_ent_wiki_sm",     # Tamil - Multi-language
+    'hi': "xx_ent_wiki_sm",     # Hindi - Multi-language
+    'ja': 'ja_core_news_sm',    # Japanese
+    'fr': 'fr_core_news_sm',    # French
+    'ur': "xx_ent_wiki_sm",     # Urdu - Multi-language
+    'la': "xx_ent_wiki_sm",     # Latin - Multi-language
+}
+
+spacy_nlp = {lang: spacy.load(model) for lang, model in nlp_models.items()}
+
+# unique_models = set(nlp_models.values())
+# for model in unique_models:
+#     spacy.cli.download(model)
+
 supported_languages = [
     "ast", "bg", "ca", "cs", "cy", "da", "de", "el", "en", "enm", "es", "et", "fa",
     "fi", "fr", "ga", "gd", "gl", "gv", "hbs", "hi", "hu", "hy", "id", "is", "it",
@@ -66,15 +118,39 @@ def split_into_sentences(text):
     sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|!)\s', text)
     return [sentence.strip() for sentence in sentences if sentence.strip() != '']
 
-# Función para lematizar una frase basada en su etiqueta de idioma
-def lemmatize_sentence(sentence, label):
-    lang_code = language_codes.get(label)
+# # Función para lematizar una frase basada en su etiqueta de idioma
+# def lemmatize_sentence(sentence, label, lang_code):    # lang_code = language_codes.get(label)
+#     tiempo = time.time()
+#     # Verificar si el idioma y su código están soportados
+#     if lang_code in supported_languages:
+#         # Dividir la frase en tokens
+#         tokens = sentence.split()
+#         # Lematizar cada token
+#         aux = ' '.join([simplemma.lemmatize(token, lang=lang_code) for token in tokens])
+#         print(time.time() - tiempo)
+#         return aux
+#     else:
+#         # Devolver la frase original si el idioma no está soportado
+#         return sentence
+
+def lemmatize_sentence(sentence, label, lang_code):
+
+    # Registrar el tiempo de inicio para medir el rendimiento
+    tiempo = time.time()
+    
     # Verificar si el idioma y su código están soportados
-    if lang_code in supported_languages:
-        # Dividir la frase en tokens
-        tokens = sentence.split()
-        # Lematizar cada token
-        return ' '.join([simplemma.lemmatize(token, lang=lang_code) for token in tokens])
+    if lang_code in spacy_nlp:
+        # Cargar el modelo de SpaCy para el idioma especificado
+        nlp = spacy_nlp[lang_code]
+        # Procesar la oración con el modelo de SpaCy
+        doc = nlp(sentence)
+        # Lematizar cada token en la oración
+        lemmatized_sentence = ' '.join([token.lemma_ for token in doc])
+        
+        # Imprimir el tiempo que tomó el proceso de lematización
+        # print("Tiempo de lematización:", time.time() - tiempo)
+        
+        return lemmatized_sentence
     else:
         # Devolver la frase original si el idioma no está soportado
         return sentence
@@ -136,10 +212,10 @@ def preprocess2(sentences, labels):
     # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
     df_exploded = df.explode('sentences').reset_index(drop=True)
     
-    # SE QUEDA ESTANCAU AQUI
+    # ESTA LINEA VA MUY LENTO
     # Lemmatize sentences according to the language in the label (if  the language is in the lemmatizer)
-    df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels']), axis=1)
-
+    # df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels']), axis=1)
+    df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels'], safe_detect_language(row['sentences'])), axis=1)    
     new_sentences_series = df_exploded['sentences']
     new_labels_series = df_exploded['labels']
     

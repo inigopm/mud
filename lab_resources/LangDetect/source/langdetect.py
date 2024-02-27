@@ -74,7 +74,6 @@ if __name__ == "__main__":
     
     plot_Confusion_Matrix(y_test, y_predict, "Greens") 
 
-
     #Plot PCA
     print('========')
     print('PCA and Explained Variance:') 

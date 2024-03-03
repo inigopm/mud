@@ -18,10 +18,6 @@ def applyNaiveBayes(X_train, y_train, X_test):
     '''
     trainArray = toNumpyArray(X_train)
     testArray = toNumpyArray(X_test)
-    print(X_train)
-    print(trainArray)
-    sys.exit()
-    
     clf = MultinomialNB()
     clf.fit(trainArray, y_train)
     y_predict = clf.predict(testArray)

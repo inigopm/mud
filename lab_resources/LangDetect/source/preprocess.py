@@ -29,7 +29,6 @@ import spacy
 model = fasttext.load_model('lid.176.bin')
 
 def detect_language_fasttext(text):
-    print(text)
     predictions = model.predict(text, k=1)  # k=1 significa obtener la mejor predicción
     return predictions[0][0].replace('__label__', '')  # Limpia la salida para obtener solo el código del idioma
 
@@ -39,6 +38,7 @@ def safe_detect_language(sentence, default='en'):
         return detect_language_fasttext(sentence)
     except Exception as e:
         print(f"Error detecting language: {e}")
+        print(f"sentence{sentence}")
         # Devuelve un código de idioma predeterminado o None si hay un error
         return default
 
@@ -95,19 +95,24 @@ nlp_models = {
     'fr': 'fr_core_news_sm',    # French
     'ur': "xx_ent_wiki_sm",     # Urdu - Multi-language
     'la': "xx_ent_wiki_sm",     # Latin - Multi-language
+    'it': 'it_core_news_sm',
+    'de':'de_core_news_sm',
+    'uk':'uk_core_news_sm',
+    'fi':'fi_core_news_sm',
+    'no':'nb_core_news_sm',
 }
-
-spacy_nlp = {lang: spacy.load(model) for lang, model in nlp_models.items()}
 
 # unique_models = set(nlp_models.values())
 # for model in unique_models:
 #     spacy.cli.download(model)
 
+spacy_nlp = {lang: spacy.load(model) for lang, model in nlp_models.items()}
+
 supported_languages = [
     "ast", "bg", "ca", "cs", "cy", "da", "de", "el", "en", "enm", "es", "et", "fa",
     "fi", "fr", "ga", "gd", "gl", "gv", "hbs", "hi", "hu", "hy", "id", "is", "it",
     "ka", "la", "lb", "lt", "lv", "mk", "ms", "nb", "nl", "nn", "pl", "pt", "ro",
-    "ru", "se", "sk", "sl", "sq", "sv", "sw", "tl", "tr", "uk"
+    "ru", "se", "sk", "sl", "sq", "sv", "sw", "tl", "tr", "uk", "it", "de", "uk","fi","no"
 ]
 
 
@@ -143,7 +148,11 @@ def lemmatize_sentence(sentence, label, lang_code):
         # Cargar el modelo de SpaCy para el idioma especificado
         nlp = spacy_nlp[lang_code]
         # Procesar la oración con el modelo de SpaCy
-        doc = nlp(sentence)
+        try:
+            doc = nlp(sentence)
+        except:
+            print(1)
+            return sentence
         # Lematizar cada token en la oración
         lemmatized_sentence = ' '.join([token.lemma_ for token in doc])
         
@@ -153,6 +162,7 @@ def lemmatize_sentence(sentence, label, lang_code):
         return lemmatized_sentence
     else:
         # Devolver la frase original si el idioma no está soportado
+        print(lang_code)
         return sentence
     
 #Tokenizer function. You can add here different preprocesses.
@@ -212,6 +222,8 @@ def preprocess2(sentences, labels):
     # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
     df_exploded = df.explode('sentences').reset_index(drop=True)
     
+    print(f"df Sentences{df_exploded}")
+
     # ESTA LINEA VA MUY LENTO
     # Lemmatize sentences according to the language in the label (if  the language is in the lemmatizer)
     # df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels']), axis=1)

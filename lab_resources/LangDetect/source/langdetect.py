@@ -45,11 +45,14 @@ if __name__ == "__main__":
     print('Test:', len(X_test))
     print('========')
     
+    print(f"Pre Train {X_train}")
+
     # Preprocess text (Word granularity only)
     if args.analyzer == 'word':
         X_train, y_train = preprocess2(X_train,y_train)
         X_test, y_test = preprocess2(X_test,y_test)
 
+    print(f"Post Train {len(X_train), X_train}")
     #Compute text features
     features, X_train_raw, X_test_raw = compute_features(X_train, 
                                                             X_test, 

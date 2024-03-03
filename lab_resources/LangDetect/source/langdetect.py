@@ -44,21 +44,17 @@ if __name__ == "__main__":
     print('Train:', len(X_train))
     print('Test:', len(X_test))
     print('========')
-    
-    print(f"Pre Train {X_train}")
 
     # Preprocess text (Word granularity only)
     if args.analyzer == 'word':
         X_train, y_train = preprocess(X_train,y_train)
         X_test, y_test = preprocess(X_test,y_test)
 
-    print(f"Post Train {len(X_train), X_train}")
     #Compute text features
     features, X_train_raw, X_test_raw = compute_features(X_train, 
                                                             X_test, 
                                                             analyzer=args.analyzer, 
                                                             max_features=args.voc_size)
-    print("rarau: ", X_train_raw)
     print('========')
     print('Number of tokens in the vocabulary:', len(features))
     print('Coverage: ', compute_coverage(features, X_test.values, analyzer=args.analyzer))
@@ -75,10 +71,10 @@ if __name__ == "__main__":
     plot_F_Scores(y_test, y_predict)
     print('========')
     
-    plot_Confusion_Matrix(y_test, y_predict, "Greens") 
-
-    #Plot PCA
-    print('========')
-    print('PCA and Explained Variance:') 
-    plotPCA(X_train, X_test,y_test, languages) 
-    print('========')
+    # plot_Confusion_Matrix(y_test, y_predict, "Greens") 
+    
+    # #Plot PCA
+    # print('========')
+    # print('PCA and Explained Variance:') 
+    # plotPCA(X_train, X_test,y_test, languages) 
+    # print('========')

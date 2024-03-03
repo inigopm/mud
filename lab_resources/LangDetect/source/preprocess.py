@@ -74,6 +74,7 @@ nlp_models = {
     'uk':'uk_core_news_sm',
     'fi':'fi_core_news_sm',
     'no':'nb_core_news_sm',
+    'multi': 'xx_ent_wiki_sm'
 }
 
 # unique_models = set(nlp_models.values())
@@ -81,6 +82,77 @@ nlp_models = {
 #     spacy.cli.download(model)
 
 spacy_nlp = {lang: spacy.load(model) for lang, model in nlp_models.items()}
+sentence_splitter = spacy.load('xx_sent_ud_sm') # Multilingual sentence splitter.
+
+"""
+Function to detect language with rules
+"""
+def detect_language_simple(text):
+    rules = {
+        'ast': [r'ñ', r'á', r'é', r'í', r'ó', r'ú'],  # Asturiano
+        'bg': [r'[\u0430-\u044f]', r'ж', r'ч', r'ш', r'ю', r'я'],  # Búlgaro
+        'ca': [r'ç', r'è', r'é', r'à', r'í', r'ó', r'ú'],  # Catalán
+        'cs': [r'č', r'š', r'ž', r'ý', r'á', r'í', r'é'],  # Checo
+        'cy': [r'ŵ', r'ŷ'],  # Galés
+        'da': [r'æ', r'ø', r'å'],  # Danés
+        'de': [r'ä', r'ö', r'ü', r'ß'],  # Alemán
+        'el': [r'[α-ω]', r'ί', r'ή', r'ώ', r'ά', r'έ', r'ύ'],  # Griego
+        'en': [r'the', r'and'],  # Inglés
+        'enm': [r'thou', r'thee', r'art', r'hast'],  # Inglés medio
+        'es': [r'ñ', r'á', r'é', r'í', r'ó', r'ú'],  # Español
+        'et': [r'õ', r'ä', r'ö', r'ü'],  # Estonio
+        'fa': [r'[ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]'],  # Persa
+        'fi': [r'ä', r'ö'],  # Finlandés
+        'fr': [r'ç', r'é', r'à', r'è', r'ù'],  # Francés
+        'ga': [r'á', r'é', r'í', r'ó', r'ú'],  # Irlandés
+        'gd': [r'bh', r'dh', r'gh', r'mh', r'th'],  # Gaélico escocés
+        'gl': [r'ñ', r'á', r'é', r'í', r'ó', r'ú'],  # Gallego
+        'gv': [r'çh', r'gh'],  # Manés
+        'hbs': [r'č', r'ć', r'đ', r'š', r'ž'],  # Serbocroata
+        'hi': [r'[ऀ-ॿ]'],  # Hindi
+        'hu': [r'á', r'é', r'í', r'ó', r'ö', r'ü', r'ű'],  # Húngaro
+        'hy': [r'[ա-ֆ]'],  # Armenio
+        'id': [r' dan ', r' yang ', r' di '],  # Indonesio
+        'is': [r'á', r'é', r'í', r'ó', r'ú', r'ý', r'ð', r'þ'],  # Islandés
+        'it': [r'à', r'é', r'ì', r'ò', r'ù'],  # Italiano
+        'ka': [r'[ა-ჰ]'],  # Georgiano
+        'la': [r' et ', r' est ', r' non '],  # Latín
+        'lb': [r'ä', r'ë', r'ï', r'ö', r'ü'],  # Luxemburgués
+        'lt': [r'ą', r'č', r'ę', r'ė', r'į', r'š', r'ų', r'ū', r'ž'],  # Lituano
+        'lv': [r'ā', r'č', r'ē', r'ģ', r'ī', r'ķ', r'ļ', r'ņ', r'š', r'ū', r'ž'],  # Letón
+        'mk': [r'ѓ', r'ж', r'ѕ', r'ќ', r'ч', r'ш', r'џ'],  # Macedonio
+        'ms': [r' dan ', r' yang ', r' untuk '],  # Malayo
+        'nb': [r'å', r'æ', r'ø'],  # Noruego Bokmål
+        'nl': [r' de ', r' het ', r' en '],  # Neerlandés
+        'nn': [r'å', r'æ', r'ø'],  # Noruego Nynorsk
+        'pl': [r'ą', r'ć', r'ę', r'ł', r'ń', r'ó', r'ś', r'ź', r'ż'],  # Polaco
+        'pt': [r'ão', r'ç', r'ê', r'ô'],  # Portugués
+        'ro': [r'ă', r'â', r'î', r'ș', r'ț'],  # Rumano
+        'ru': [r'ы', r'ь', r'ю', r'я', r'э', r'щ'],  # Ruso
+        'se': [r'á', r'č', r'đ', r'ŋ', r'š', r'ž'],  # Sami septentrional
+        'sk': [r'á', r'č', r'ď', r'é', r'í', r'ĺ', r'ň', r'ó', r'ŕ', r'š', r'ť', r'ú', r'ý', r'ž'],  # Eslovaco
+        'sl': [r'č', r'š', r'ž', r'ć'],  # Esloveno
+        'sq': [r'ë', r'ç'],  # Albanés
+        'sv': [r'å', r'ä', r'ö'],  # Sueco
+        'sw': [r' na ', r' ya '],  # Suajili
+        'tl': [r'ng', r' mga '],  # Tagalo
+        'tr': [r'ğ', r'ı', r'ö', r'ş', r'ü'],  # Turco
+        'uk': [r'г', r'ґ', r'є', r'і', r'ї', r'й'],  # Ucraniano
+        'no': [r'å', r'æ', r'ø']  # Noruego
+    }
+
+    # Contar coincidencias de cada regla en el texto
+    language_scores = {lang: 0 for lang in rules}
+    for lang, patterns in rules.items():
+        for pattern in patterns:
+            if re.search(pattern, text):
+                language_scores[lang] += 1
+
+    # Determinar el idioma con el mayor número de coincidencias
+    detected_language = max(language_scores, key=language_scores.get)
+
+    # Si no hay coincidencias, devolver 'unknown'
+    return detected_language if language_scores[detected_language] > 0 else 'unknown'
 
 # Función para dividir las oraciones en frases
 def split_into_sentences(text):
@@ -88,6 +160,12 @@ def split_into_sentences(text):
     # Puedes ajustar la expresión regular según tus necesidades específicas.
     sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|!)\s', text)
     return [sentence.strip() for sentence in sentences if sentence.strip() != '']
+
+# Función para dividir las oraciones en frases usando spaCy
+def split_into_sentences_spacy(text):
+    doc = sentence_splitter(text)
+    return [sent.text.strip() for sent in doc.sents]
+
 
 def lemmatize_sentence(sentence, label, lang_code):
     
@@ -98,16 +176,32 @@ def lemmatize_sentence(sentence, label, lang_code):
         # Procesar la oración con el modelo de SpaCy
         try:
             doc = nlp(sentence)
-        except:
+        except Exception as e:
+
             return "NaN"
         
         # Lematizar cada token en la oración
-        lemmatized_sentence = ' '.join([token.lemma_ for token in doc])
-        
+        lemmatized_sentence = ' '.join([token.lemma_ if token.lemma_ != '' else token.text for token in doc])
         return lemmatized_sentence
     else:
         return sentence
+    
+def lemmatize_sentence2(sentence):
+    
+    nlp = spacy_nlp['multi']
 
+    # Procesar la oración con el modelo de SpaCy
+    try:
+        doc = nlp(sentence)
+        # print("doc: ", doc)
+        # post_doc = [token.lemma_ if token.lemma_ != '' else token.text for token in doc]
+    except:
+        return "NaN"
+    
+    # Lematizar cada token en la oración
+    lemmatized_sentence = ' '.join([token.lemma_ if token.lemma_ != '' else token.text for token in doc])
+
+    return lemmatized_sentence
 
 #Tokenizer function. You can add here different preprocesses.
 def preprocess(sentences, labels):
@@ -123,17 +217,22 @@ def preprocess(sentences, labels):
     df = pd.DataFrame({'sentences': sentences, 'labels': labels})
     
     # Aplicar la función para dividir cada 'sentence' en una lista de frases más pequeñas
-    df['sentences'] = df['sentences'].apply(split_into_sentences)
+    # df['sentences'] = df['sentences'].apply(split_into_sentences)
+    df['sentences'] = df['sentences'].apply(split_into_sentences_spacy)
+
     
     # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
     df_exploded = df.explode('sentences').reset_index(drop=True)
-    
+
+    print("aaaaa: ", df_exploded)
+
     df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels'], safe_detect_language(row['sentences'])), axis=1)    
+    # df_exploded['sentences'] = df_exploded.apply(lambda row: lemmatize_sentence2(row['sentences']), axis=1)
+
+    print("bbbbb: ", df_exploded)
+
     new_sentences_series = df_exploded['sentences']
     new_labels_series = df_exploded['labels']
-    
-    print(new_sentences_series.head())
-    print(new_labels_series.head())
 
     return new_sentences_series, new_labels_series
 

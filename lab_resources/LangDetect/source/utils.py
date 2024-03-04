@@ -8,7 +8,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 import scipy
 import numpy as np
 import pandas as pd
-
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def compute_features(X_train, 
@@ -41,6 +41,19 @@ def compute_features(X_train,
   return unigramFeatures, X_unigram_train_raw, X_unigram_test_raw
     
 
+def new_compute_features(X_train, X_test, analyzer='char', max_features=None):
+    '''
+    Using TF-IDF vectorizer instead of countVectorizer
+    '''
+  
+    tfidfVectorizer = TfidfVectorizer(analyzer=analyzer,
+                                      max_features=max_features,
+                                      ngram_range=(1,1))
+  
+    X_tfidf_train_raw = tfidfVectorizer.fit_transform(X_train)
+    X_tfidf_test_raw = tfidfVectorizer.transform(X_test)
+    tfidfFeatures = tfidfVectorizer.get_feature_names_out()
+    return tfidfFeatures, X_tfidf_train_raw, X_tfidf_test_raw
 
 def compute_coverage(features, split, analyzer='char'):
   '''

@@ -51,7 +51,7 @@ if __name__ == "__main__":
         X_test, y_test = preprocess(X_test,y_test)
 
     #Compute text features
-    features, X_train_raw, X_test_raw = compute_features(X_train, 
+    features, X_train_raw, X_test_raw = new_compute_features(X_train, 
                                                             X_test, 
                                                             analyzer=args.analyzer, 
                                                             max_features=args.voc_size)
@@ -71,10 +71,10 @@ if __name__ == "__main__":
     plot_F_Scores(y_test, y_predict)
     print('========')
     
-    # plot_Confusion_Matrix(y_test, y_predict, "Greens") 
+    plot_Confusion_Matrix(y_test, y_predict, "Greens") 
     
-    # #Plot PCA
-    # print('========')
-    # print('PCA and Explained Variance:') 
-    # plotPCA(X_train, X_test,y_test, languages) 
-    # print('========')
+    #Plot PCA
+    print('========')
+    print('PCA and Explained Variance:') 
+    plotPCA(X_train, X_test,y_test, languages) 
+    print('========')

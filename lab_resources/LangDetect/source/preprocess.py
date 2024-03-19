@@ -167,6 +167,9 @@ def lemmatize_sentence2(sentence):
 
     return lemmatized_sentence
 
+# Function to try no preprocessing.
+def preprocess0(sentences, labels): return sentences, labels
+
 # Tokenizer function. You can add here different preprocesses.
 def preprocess(sentences, labels):
     '''
@@ -183,9 +186,35 @@ def preprocess(sentences, labels):
     # # df['sentences'] = df['sentences'].apply(split_into_sentences)
     # df['sentences'] = df['sentences'].apply(split_into_sentences_spacy)
 
-    
     # # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
-    # df = df.explode('sentences').reset_index(drop=True)
+    # df_exploded = df.explode('sentences').reset_index(drop=True)
+
+    df['sentences'] = df.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels'], safe_detect_language(row['sentences'])), axis=1)
+
+    new_sentences_series = df['sentences']
+    new_labels_series = df['labels']
+
+    return new_sentences_series, new_labels_series
+
+# Tokenizer function. You can add here different preprocesses.
+def preprocess2(sentences, labels):
+    '''
+    Task: Given a sentence apply all the required preprocessing steps
+    to compute train our classifier, such as sentence splitting, 
+    tokenization or sentence splitting.
+
+    Input: Sentence in string format
+    Output: Preprocessed sentence either as a list or a string
+    '''
+    # Crear un DataFrame a partir de las series
+    df = pd.DataFrame({'sentences': sentences, 'labels': labels})
+    
+    # # df['sentences'] = df['sentences'].apply(split_into_sentences)
+    # df['sentences'] = df['sentences'].apply(split_into_sentences_spacy)
+
+    
+    # # # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
+    # df_exploded = df.explode('sentences').reset_index(drop=True)
 
     df['sentences'] = df.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels'], safe_detect_language_simple(row['sentences'])), axis=1)    
     # df['sentences'] = df.apply(lambda row: lemmatize_sentence2(row['sentences']), axis=1)
@@ -195,8 +224,33 @@ def preprocess(sentences, labels):
 
     return new_sentences_series, new_labels_series
 
-# Function to try no preprocessing.
-def preprocess0(sentences, labels): return sentences, labels
+# Tokenizer function. You can add here different preprocesses.
+def preprocess3(sentences, labels):
+    '''
+    Task: Given a sentence apply all the required preprocessing steps
+    to compute train our classifier, such as sentence splitting, 
+    tokenization or sentence splitting.
+
+    Input: Sentence in string format
+    Output: Preprocessed sentence either as a list or a string
+    '''
+    # Crear un DataFrame a partir de las series
+    df = pd.DataFrame({'sentences': sentences, 'labels': labels})
+    
+    # # df['sentences'] = df['sentences'].apply(split_into_sentences)
+    # df['sentences'] = df['sentences'].apply(split_into_sentences_spacy)
+
+    
+    # # # Explode la columna 'sentences' para que cada frase esté en su propia fila, duplicando la etiqueta correspondiente
+    # df_exploded = df.explode('sentences').reset_index(drop=True)
+
+    df['sentences'] = df.apply(lambda row: lemmatize_sentence(row['sentences'], row['labels'], safe_detect_language_simple(row['sentences'])), axis=1)    
+    # df['sentences'] = df.apply(lambda row: lemmatize_sentence2(row['sentences']), axis=1)
+
+    new_sentences_series = df['sentences']
+    new_labels_series = df['labels']
+
+    return new_sentences_series, new_labels_series
 
 
 

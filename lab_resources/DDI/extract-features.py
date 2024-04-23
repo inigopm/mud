@@ -7,10 +7,41 @@ from os import listdir
 from xml.dom.minidom import parse
 from nltk.tokenize import word_tokenize
 
+import spacy
 
+# Load a SpaCy model suitable for your language; 'en_core_web_sm' for English
+nlp = spacy.load("en_core_web_sm")
    
 ## --------- tokenize sentence ----------- 
 ## -- Tokenize sentence, returning tokens and span offsets
+
+# def tokenize(txt):
+#     tokens = []
+#     offset = 0
+#     doc = nlp(txt.strip())  # Strip to remove leading/trailing whitespace including newlines
+#     for token in doc:
+#         if token.text in ['\r\n', '\n', '\r']:  # Skip newline/carriage return tokens
+#             continue
+#         current_position = txt.find(token.text, offset)
+#         if current_position != -1:
+#             offset = current_position
+#         tokens.append((token.text, offset, offset + len(token.text) - 1))
+#         offset += len(token.text)
+#     return tokens
+
+
+# def tokenize(txt):
+#     # Using SpaCy's tokenizer
+#     doc = nlp(txt)
+#     print("doc", doc)
+#     tokens = []
+#     for token in doc:
+#         # Normalizing all tokens to lowercase
+#         normalized_text = token.text.lower()
+#         # Append token text, start and end character offsets to tokens list
+#         tokens.append((normalized_text, token.idx, token.idx + len(token.text) - 1))
+#     return tokens
+
 
 def tokenize(txt):
     offset = 0
@@ -42,33 +73,61 @@ def get_tag(token, spans) :
 ## -- Extract features for each token in given sentence
 
 def extract_features(tokens) :
-
-   # for each token, generate list of features and add it to the result
    result = []
-   for k in range(0,len(tokens)):
-      tokenFeatures = [];
+   for k in range(len(tokens)):
+      tokenFeatures = []
       t = tokens[k][0]
-
       tokenFeatures.append("form="+t)
       tokenFeatures.append("suf3="+t[-3:])
+      tokenFeatures.append("pre2="+t[:2])
+      tokenFeatures.append("token_len="+str(len(t)))
+      tokenFeatures.append("contains_digit="+("1" if any(char.isdigit() for char in t) else "0"))
+      tokenFeatures.append("is_numeric="+("1" if t.isdigit() else "0"))
 
-      if k>0 :
+      if k > 0 :
          tPrev = tokens[k-1][0]
          tokenFeatures.append("formPrev="+tPrev)
-         tokenFeatures.append("suf3Prev="+tPrev[-3:])
       else :
          tokenFeatures.append("BoS")
 
-      if k<len(tokens)-1 :
+      if k < len(tokens)-1 :
          tNext = tokens[k+1][0]
          tokenFeatures.append("formNext="+tNext)
-         tokenFeatures.append("suf3Next="+tNext[-3:])
-      else:
+      else :
          tokenFeatures.append("EoS")
     
       result.append(tokenFeatures)
-    
    return result
+
+
+# def extract_features(tokens) :
+
+#    # for each token, generate list of features and add it to the result
+#    result = []
+#    for k in range(0,len(tokens)):
+#       tokenFeatures = [];
+#       t = tokens[k][0]
+
+#       tokenFeatures.append("form="+t)
+#       tokenFeatures.append("suf3="+t[-3:])
+
+#       if k>0 :
+#          tPrev = tokens[k-1][0]
+#          tokenFeatures.append("formPrev="+tPrev)
+#          tokenFeatures.append("suf3Prev="+tPrev[-3:])
+#       else :
+#          tokenFeatures.append("BoS")
+
+#       if k<len(tokens)-1 :
+#          tNext = tokens[k+1][0]
+#          tokenFeatures.append("formNext="+tNext)
+#          tokenFeatures.append("suf3Next="+tNext[-3:])
+#       else:
+#          tokenFeatures.append("EoS")
+    
+#       result.append(tokenFeatures)
+    
+#    return result
 
 
 ## --------- MAIN PROGRAM ----------- 
@@ -106,6 +165,8 @@ for f in listdir(datadir) :
 
       # convert the sentence to a list of tokens
       tokens = tokenize(stext)
+      # print("TOKENS", tokens)
+      # sys.exit()
       # extract sentence features
       features = extract_features(tokens)
 

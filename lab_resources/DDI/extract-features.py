@@ -72,32 +72,40 @@ def get_tag(token, spans) :
 ## --------- Feature extractor ----------- 
 ## -- Extract features for each token in given sentence
 
-def extract_features(tokens) :
-   result = []
-   for k in range(len(tokens)):
-      tokenFeatures = []
-      t = tokens[k][0]
-      tokenFeatures.append("form="+t)
-      tokenFeatures.append("suf3="+t[-3:])
-      tokenFeatures.append("pre2="+t[:2])
-      tokenFeatures.append("token_len="+str(len(t)))
-      tokenFeatures.append("contains_digit="+("1" if any(char.isdigit() for char in t) else "0"))
-      tokenFeatures.append("is_numeric="+("1" if t.isdigit() else "0"))
+def extract_features(tokens, pos_tags=None):
+    result = []
+    for k in range(len(tokens)):
+        tokenFeatures = []
+        t = tokens[k][0]
+        tokenFeatures.append("form=" + t)
+        tokenFeatures.append("suf3=" + t[-3:])
+        tokenFeatures.append("pre2=" + t[:2])
+        tokenFeatures.append("token_len=" + str(len(t)))
+        tokenFeatures.append("contains_digit=" + ("1" if any(char.isdigit() for char in t) else "0"))
+        tokenFeatures.append("is_numeric=" + ("1" if t.isdigit() else "0"))
+        tokenFeatures.append("is_upper=" + ("1" if t.isupper() else "0"))
+        tokenFeatures.append("is_lower=" + ("1" if t.islower() else "0"))
+        tokenFeatures.append("is_title=" + ("1" if t.istitle() else "0"))
+        tokenFeatures.append("contains_punct=" + ("1" if any(char in ',.!?;:' for char in t) else "0"))
 
-      if k > 0 :
-         tPrev = tokens[k-1][0]
-         tokenFeatures.append("formPrev="+tPrev)
-      else :
-         tokenFeatures.append("BoS")
+        if pos_tags:
+            tokenFeatures.append("pos=" + pos_tags[k])
 
-      if k < len(tokens)-1 :
-         tNext = tokens[k+1][0]
-         tokenFeatures.append("formNext="+tNext)
-      else :
-         tokenFeatures.append("EoS")
-    
-      result.append(tokenFeatures)
-   return result
+        if k > 0:
+            tPrev = tokens[k-1][0]
+            tokenFeatures.append("formPrev=" + tPrev)
+        else:
+            tokenFeatures.append("BoS")
+
+        if k < len(tokens)-1:
+            tNext = tokens[k+1][0]
+            tokenFeatures.append("formNext=" + tNext)
+        else:
+            tokenFeatures.append("EoS")
+
+        result.append(tokenFeatures)
+    return result
+
 
 
 # def extract_features(tokens) :

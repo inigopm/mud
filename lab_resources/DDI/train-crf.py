@@ -46,8 +46,8 @@ if __name__ == '__main__':
     trainer.select('l2sgd', 'crf1d')
     
     # This demonstrates how to list parameters and obtain their values.    
-    trainer.set('feature.minfreq', 1) # mininum frequecy of a feature to consider it
-    trainer.set('c2', 0.1)           # coefficient for L2 regularization
+    #trainer.set('feature.minfreq', 1) # mininum frequecy of a feature to consider it
+    trainer.set('c2', 0.01)           # coefficient for L2 regularization
 
     print("Training with following parameters: ")
     for name in trainer.params():

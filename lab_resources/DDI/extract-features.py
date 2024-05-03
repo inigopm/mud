@@ -6,11 +6,14 @@ from os import listdir
 
 from xml.dom.minidom import parse
 from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.tag import pos_tag
 
 import spacy
 
 # Load a SpaCy model suitable for your language; 'en_core_web_sm' for English
 nlp = spacy.load("en_core_web_sm")
+lemmatizer = WordNetLemmatizer()
    
 ## --------- tokenize sentence ----------- 
 ## -- Tokenize sentence, returning tokens and span offsets
@@ -86,10 +89,24 @@ def extract_features(tokens, pos_tags=None):
         tokenFeatures.append("is_upper=" + ("1" if t.isupper() else "0"))
         tokenFeatures.append("is_lower=" + ("1" if t.islower() else "0"))
         tokenFeatures.append("is_title=" + ("1" if t.istitle() else "0"))
-        tokenFeatures.append("contains_punct=" + ("1" if any(char in ',.!?;:' for char in t) else "0"))
+        tokenFeatures.append("contains_punct=" + ("1" if any(char in ',.!?;:' for char in t) else "0"))  
 
-        if pos_tags:
-            tokenFeatures.append("pos=" + pos_tags[k])
+        tokenFeatures.append("suf4=" + t[-4:])
+        tokenFeatures.append("suf5=" + t[-5:])
+        tokenFeatures.append("suf6=" + t[-6:])
+        
+        tokenFeatures.append("pre3=" + t[:3])
+        tokenFeatures.append("pre4=" + t[:4])
+        tokenFeatures.append("pre5=" + t[:5])      
+
+
+        # part of speach (POS) tag of the word
+        pos_tag_ = pos_tag([t])[0][1]
+        tokenFeatures.append("pos=" + pos_tag_)
+
+        pos = pos_tag_[0].lower() if pos_tag_ and pos_tag_[0].lower() in {'n', 'v', 'a', 'r', 's'} else 'n'
+
+        tokenFeatures.append("lemma=" + lemmatizer.lemmatize(t, pos))
 
         if k > 0:
             tPrev = tokens[k-1][0]

@@ -8,24 +8,15 @@ import argparse
 from joblib import dump
 
 
-
-def fix_format(token):
-	if 'BoS' in token:
-		token = token.replace('BoS','formPrev=BoS	suf3Prev=BoS')
-	if 'EoS' in token:
-		token = token.replace('EoS','formNext=EoS	suf3Next=EoS')
-	return token
-
-
 def load_data(data):
 	features = []
 	labels = []
-	for token in data:
-		token = token.strip()
-		token = fix_format(token).split('\t')
-		token_dict = {feat.split('=')[0]:feat.split('=')[1] for feat in token[1:]}
-		features.append(token_dict)
-		labels.append(token[0])
+	for interaction in data:
+		interaction = interaction.strip()
+		interaction = interaction.split('\t')
+		interaction_dict = {feat.split('=')[0]:feat.split('=')[1] for feat in interaction[1:] }
+		features.append(interaction_dict)
+		labels.append(interaction[0])
 	return features, labels
 
 

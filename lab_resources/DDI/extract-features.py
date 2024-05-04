@@ -1,205 +1,370 @@
 #! /usr/bin/python3
 
 import sys
-import re
 from os import listdir
 
 from xml.dom.minidom import parse
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.tag import pos_tag
 
-import spacy
-
-# Load a SpaCy model suitable for your language; 'en_core_web_sm' for English
-nlp = spacy.load("en_core_web_sm")
-lemmatizer = WordNetLemmatizer()
-   
-## --------- tokenize sentence ----------- 
-## -- Tokenize sentence, returning tokens and span offsets
-
-# def tokenize(txt):
-#     tokens = []
-#     offset = 0
-#     doc = nlp(txt.strip())  # Strip to remove leading/trailing whitespace including newlines
-#     for token in doc:
-#         if token.text in ['\r\n', '\n', '\r']:  # Skip newline/carriage return tokens
-#             continue
-#         current_position = txt.find(token.text, offset)
-#         if current_position != -1:
-#             offset = current_position
-#         tokens.append((token.text, offset, offset + len(token.text) - 1))
-#         offset += len(token.text)
-#     return tokens
+from deptree import *
+#import patterns
 
 
-# def tokenize(txt):
-#     # Using SpaCy's tokenizer
-#     doc = nlp(txt)
-#     print("doc", doc)
-#     tokens = []
-#     for token in doc:
-#         # Normalizing all tokens to lowercase
-#         normalized_text = token.text.lower()
-#         # Append token text, start and end character offsets to tokens list
-#         tokens.append((normalized_text, token.idx, token.idx + len(token.text) - 1))
-#     return tokens
+## ------------------- 
+## -- Convert a pair of drugs and their context in a feature vector
 
+def extract_features(tree, entities, e1, e2) :
+   feats = set()
 
-def tokenize(txt):
-    offset = 0
-    tks = []
-    ## word_tokenize splits words, taking into account punctuations, numbers, etc.
-    for t in word_tokenize(txt):
-        ## keep track of the position where each token should appear, and
-        ## store that information with the token
-        offset = txt.find(t, offset)
-        tks.append((t, offset, offset+len(t)-1))
-        offset += len(t)
+   # get head token for each gold entity
+   tkE1 = tree.get_fragment_head(entities[e1]['start'],entities[e1]['end'])
+   tkE2 = tree.get_fragment_head(entities[e2]['start'],entities[e2]['end'])
 
-    ## tks is a list of triples (word,start,end)
-    return tks
+   if tkE1 is not None and tkE2 is not None:
+      # features for tokens in between E1 and E2
+      #for tk in range(tkE1+1, tkE2) :
+      tk=tkE1+1
+      try:
+        while (tree.is_stopword(tk)):
+          tk += 1
+      except:
+        return set()
+      word  = tree.get_word(tk)
+      lemma = tree.get_lemma(tk).lower()
+      tag = tree.get_tag(tk)
+      feats.add("lib=" + lemma)
+      feats.add("wib=" + word)
+      feats.add("lpib=" + lemma + "_" + tag)
+      
+      eib = False
+      for tk in range(tkE1+1, tkE2) :
+         if tree.is_entity(tk, entities):
+            eib = True 
+      
+	  # feature indicating the presence of an entity in between E1 and E2
+      feats.add('eib='+ str(eib))
 
+      # features about paths in the tree
+      lcs = tree.get_LCS(tkE1,tkE2)
+      
+      path1 = tree.get_up_path(tkE1,lcs)
+      path1 = "<".join([tree.get_lemma(x)+"_"+tree.get_rel(x) for x in path1])
+      feats.add("path1="+path1)
 
-## --------- get tag ----------- 
-##  Find out whether given token is marked as part of an entity in the XML
+      path2 = tree.get_down_path(lcs,tkE2)
+      path2 = ">".join([tree.get_lemma(x)+"_"+tree.get_rel(x) for x in path2])
+      feats.add("path2="+path2)
 
-def get_tag(token, spans) :
-   (form,start,end) = token
-   for (spanS,spanE,spanT) in spans :
-      if start==spanS and end<=spanE : return "B-"+spanT
-      elif start>=spanS and end<=spanE : return "I-"+spanT
+      path = path1+"<"+tree.get_lemma(lcs)+"_"+tree.get_rel(lcs)+">"+path2      
+      feats.add("path="+path)
+      
+   return feats
 
-   return "O"
- 
-## --------- Feature extractor ----------- 
-## -- Extract features for each token in given sentence
+def extract_features1(tree, entities, e1, e2, clue_lemmas) :
+    feats = set()
 
-def extract_features(tokens, pos_tags=None):
-    result = []
-    for k in range(len(tokens)):
-        tokenFeatures = []
-        t = tokens[k][0]
-        tokenFeatures.append("form=" + t)
-        tokenFeatures.append("suf3=" + t[-3:])
-        tokenFeatures.append("pre2=" + t[:2])
-        tokenFeatures.append("token_len=" + str(len(t)))
-        tokenFeatures.append("contains_digit=" + ("1" if any(char.isdigit() for char in t) else "0"))
-        tokenFeatures.append("is_numeric=" + ("1" if t.isdigit() else "0"))
-        tokenFeatures.append("is_upper=" + ("1" if t.isupper() else "0"))
-        tokenFeatures.append("is_lower=" + ("1" if t.islower() else "0"))
-        tokenFeatures.append("is_title=" + ("1" if t.istitle() else "0"))
-        tokenFeatures.append("contains_punct=" + ("1" if any(char in ',.!?;:' for char in t) else "0"))  
+    # get head token for each gold entity
+    tkE1 = tree.get_fragment_head(entities[e1]['start'],entities[e1]['end'])
+    tkE2 = tree.get_fragment_head(entities[e2]['start'],entities[e2]['end'])
 
-        tokenFeatures.append("suf4=" + t[-4:])
-        tokenFeatures.append("suf5=" + t[-5:])
-        tokenFeatures.append("suf6=" + t[-6:])
+    if tkE1 is not None and tkE2 is not None:
+        # features for tokens in between E1 and E2
+        #for tk in range(tkE1+1, tkE2) :
+        tk=tkE1+1
+        try:
+            while (tree.is_stopword(tk)):
+                tk += 1
+        except:
+            return set()
+        word  = tree.get_word(tk)
+        lemma = tree.get_lemma(tk).lower()
+        tag = tree.get_tag(tk)
+        feats.add("lib=" + lemma)
+        feats.add("wib=" + word)
+        feats.add("lpib=" + lemma + "_" + tag)
+
+        if tkE1 is not None and tkE2 is not None:
+        # tokens between E1 and E2
+            tokens_between = []
+            for tk in range(tkE1 + 1, tkE2):
+                try:
+                    if not tree.is_stopword(tk):
+                        # word = tree.get_word(tk)
+                        # lemma = tree.get_lemma(tk).lower()
+                        tokens_between.append((lemma, word))
+                except:
+                    return set()
+
+        # n-grams extraction
+        for i in range(len(tokens_between) - 2 + 1):
+            ngram = " ".join([tokens_between[j][0] for j in range(i, i + 2)])
+            feats.add("ngram=" + ngram)
         
-        tokenFeatures.append("pre3=" + t[:3])
-        tokenFeatures.append("pre4=" + t[:4])
-        tokenFeatures.append("pre5=" + t[:5])      
+        # CLUE LEMMAS
+      
+        for tk in range(0, tkE1):
+            lemma = tree.get_lemma(tk).lower()
+            if lemma in clue_lemmas:
+                feats.add(lemma + f"_before=True")
+
+        for tk in range(tkE1+1, tkE2):
+            lemma = tree.get_lemma(tk).lower()
+            if lemma in clue_lemmas:
+                feats.add(lemma + f"_between=True")
+
+        total_tokens = tree.get_n_nodes()
+        for tk in range(tkE2+1, total_tokens):
+            lemma = tree.get_lemma(tk).lower()
+            if lemma in clue_lemmas:
+                feats.add(lemma + f"_after=True")
 
 
-        # part of speach (POS) tag of the word
-        pos_tag_ = pos_tag([t])[0][1]
-        tokenFeatures.append("pos=" + pos_tag_)
+        eib = False
+        for tk in range(tkE1 + 1, tkE2):
+            if tree.is_entity(tk, entities):
+                eib = True
 
-        pos = pos_tag_[0].lower() if pos_tag_ and pos_tag_[0].lower() in {'n', 'v', 'a', 'r', 's'} else 'n'
+        # feature indicating the presence of a THIRD ENTITY in between E1 and E2
+        feats.add('eib=' + str(eib))
 
-        tokenFeatures.append("lemma=" + lemmatizer.lemmatize(t, pos))
+        # features about PATHS in the tree
+        lcs = tree.get_LCS(tkE1, tkE2)
 
-        if k > 0:
-            tPrev = tokens[k-1][0]
-            tokenFeatures.append("formPrev=" + tPrev)
-        else:
-            tokenFeatures.append("BoS")
+        path1 = tree.get_up_path(tkE1, lcs)
+        path1 = "<".join([tree.get_lemma(x) + "_" + tree.get_rel(x) for x in path1])
+        feats.add("path1=" + path1)
 
-        if k < len(tokens)-1:
-            tNext = tokens[k+1][0]
-            tokenFeatures.append("formNext=" + tNext)
-        else:
-            tokenFeatures.append("EoS")
+        path2 = tree.get_down_path(lcs, tkE2)
+        path2 = ">".join([tree.get_lemma(x) + "_" + tree.get_rel(x) for x in path2])
+        feats.add("path2=" + path2)
 
-        result.append(tokenFeatures)
-    return result
+        path = path1 + "<" + tree.get_lemma(lcs) + "_" + tree.get_rel(lcs) + ">" + path2
+        feats.add("path=" + path)
+
+        # Distance between Entities feature
+        distance = abs(tkE2 - tkE1)
+        feats.add("distance=" + str(distance))
+
+        # Entity Neighbors feature
+        neighbor1 = tree.get_word(tree.get_parent(tkE1)) if tree.get_parent(tkE1) is not None else 'None'
+        neighbor2 = tree.get_word(tree.get_parent(tkE2)) if tree.get_parent(tkE2) is not None else 'None'
+        feats.add("neighbor1=" + neighbor1)
+        feats.add("neighbor2=" + neighbor2)
+
+        # TYPES OF ENTITIES
+        # feats.add(word + "is_person=")
+        # 'is_person'
+        # 'is_organization'
+        # 'is_diagnose'
+        # 'is_drug'
+        # 'is_crime'
+        # 'is_penalty'
 
 
 
-# def extract_features(tokens) :
 
-#    # for each token, generate list of features and add it to the result
-#    result = []
-#    for k in range(0,len(tokens)):
-#       tokenFeatures = [];
-#       t = tokens[k][0]
+        # PATHS EXTENSION
+        # path1 = tree.get_up_path(tkE1, lcs)
+        # path1_nodes = []
+        # path1_edges = []
+        # for node in path1:
+        #     path1_nodes.append(tree.get_word(node))
+        #     path1_nodes.append(tree.get_lemma(node))
+        #     path1_nodes.append(tree.get_tag(node))
+        #     if node != lcs:
+        #         parent = tree.get_parent(node)
+        #         path1_edges.append(tree.get_rel(node))
+        #         if parent and node:
+        #             path1_edges.append('>' if parent == node + 1 else '<')
+        #             path1_edges.append('dir' if parent == node + 1 else 'indir')
+        # feats.add("path1_nodes=" + "<".join(path1_nodes))
+        # feats.add("path1_edges=" + "<".join(path1_edges))
+        # # path 2
+        
+        # path2_nodes = []
+        # path2_edges = []
+        # for node in path2:
+        #     path2_nodes.append(tree.get_word(node))
+        #     path2_nodes.append(tree.get_lemma(node))
+        #     path2_nodes.append(tree.get_tag(node))
+        #     if node != lcs:
+        #         parent = tree.get_parent(node)
+        #         path2_edges.append(tree.get_rel(node))
+        #         if parent and node:
+        #             path2_edges.append('>' if parent == node + 1 else '<')
+        #             path2_edges.append('dir' if parent == node + 1 else 'indir')
+        # feats.add("path2_nodes=" + "<".join(path2_nodes))
+        # feats.add("path2_edges=" + "<".join(path2_edges))
+        # full path
 
-#       tokenFeatures.append("form="+t)
-#       tokenFeatures.append("suf3="+t[-3:])
+        # path = path1 + [lcs] + path2
+        # path_nodes = []
+        # path_edges = []
+        # for node in path:
+        #     path_nodes.append(tree.get_word(node))
+        #     path_nodes.append(tree.get_lemma(node))
+        #     path_nodes.append(tree.get_tag(node))
+        #     if node != lcs:
+        #         parent = tree.get_parent(node)
+        #         path_edges.append(tree.get_rel(node))
+        #         if parent and node:
+        #             path_edges.append('>' if parent == node + 1 else '<')
+        #             path_edges.append('dir' if parent == node + 1 else 'indir')
+        # feats.add("path_nodes=" + "<".join(path_nodes))
+        # feats.add("path_edges=" + "<".join(path_edges))
 
-#       if k>0 :
-#          tPrev = tokens[k-1][0]
-#          tokenFeatures.append("formPrev="+tPrev)
-#          tokenFeatures.append("suf3Prev="+tPrev[-3:])
-#       else :
-#          tokenFeatures.append("BoS")
 
-#       if k<len(tokens)-1 :
-#          tNext = tokens[k+1][0]
-#          tokenFeatures.append("formNext="+tNext)
-#          tokenFeatures.append("suf3Next="+tNext[-3:])
-#       else:
-#          tokenFeatures.append("EoS")
-    
-#       result.append(tokenFeatures)
-    
-#    return result
+        # # loop before tkE1
+        # for c, tk in enumerate(range(0, tkE1)):
+        #     # features for tokens before E1
+        #     try:
+        #         if tree.is_stopword(tk):
+        #             continue
+        #         word = tree.get_word(tk).lower()
+        #         lemma = tree.get_lemma(tk).lower()
+        #         tag = tree.get_tag(tk)
+
+        #         feats.add(f"wb_before_{tkE1 - c}=" + word)
+        #         feats.add(f"lb_before_{tkE1 - c}=" + lemma)
+        #         feats.add(f"tb_before_{tkE1 - c}=" + tag)
+        #         feats.add(f"wlb_before_{tkE1 - c}=" + word + "_" + lemma)
+        #         feats.add(f"wtb_before_{tkE1 - c}=" + word + "_" + tag)
+        #         feats.add(f"ltb_before_{tkE1 - c}=" + lemma + "_" + tag)
+        #         feats.add(f"wltb_before_{tkE1 - c}=" + word + "_" + lemma + "_" + tag)
+
+        #         # Check for presence of clue verbs before tkE1
+        #         for label, verb_list in zip(['moa', 'effect', 'advice', 'int'],
+        #                                     [moa_clue_verbs, effect_clue_verbs, advice_clue_verbs,
+        #                                      int_clue_verbs]):
+        #             if word in verb_list:
+        #                 feats.add(f'clue_verb_{label}_before={word}')
+        #                 break
+        #     except:
+        #         return set()
+
+        # # loop between tkE1 an tkE2
+        # for c, tk in enumerate(range(tkE1 + 1, tkE2)):
+        #     # features for tokens in between E1 and E2
+        #     try:
+        #         if tree.is_stopword(tk):
+        #             continue
+        #         word = tree.get_word(tk).lower()
+
+        #         # Remove any non-alphanumeric characters from the word
+        #         # clean_word = ''.join(c for c in word if c.isalnum())
+
+        #         lemma = tree.get_lemma(tk).lower()
+        #         tag = tree.get_tag(tk)
+
+        #         feats.add(f"wb_between_{c}=" + word)
+        #         feats.add(f"lb_between_{c}=" + lemma)
+        #         feats.add(f"tb_between_{c}=" + tag)
+        #         feats.add(f"wlb_between_{c}=" + word + "_" + lemma)
+        #         feats.add(f"wtb_between_{c}=" + word + "_" + tag)
+        #         feats.add(f"ltb_between_{c}=" + lemma + "_" + tag)
+        #         feats.add(f"wltb_between_{c}=" + word + "_" + lemma + "_" + tag)
+
+        #         # Check for presence of clue verbs between entity 1 and entity 2
+        #         for label, verb_list in zip(['moa', 'effect', 'advice', 'int'],
+        #                                     [moa_clue_verbs, effect_clue_verbs, advice_clue_verbs,
+        #                                      int_clue_verbs]):
+        #             if word in verb_list:
+        #                 feats.add(f'clue_verb_{label}_between={word}')
+        #                 break
+        #     except:
+        #         return set()
+
+        # for c, tk in enumerate(range(tkE2 + 1, total_tokens)):
+        #     # features for tokens after E2
+        #     try:
+
+        #         if tree.is_stopword(tk):
+        #             continue
+        #         word = tree.get_word(tk).lower()
+        #         lemma = tree.get_lemma(tk).lower()
+        #         tag = tree.get_tag(tk)
+
+        #         feats.add(f"wb_after_{c}=" + word)
+        #         feats.add(f"lb_after_{c}=" + lemma)
+        #         feats.add(f"tb_after_{c}=" + tag)
+        #         feats.add(f"wlb_after_{c}=" + word + "_" + lemma)
+        #         feats.add(f"wtb_after_{c}=" + word + "_" + tag)
+        #         feats.add(f"ltb_after_{c}=" + lemma + "_" + tag)
+        #         feats.add(f"wltb_after_{c}=" + word + "_" + lemma + "_" + tag)
+
+        #         # Check for presence of clue verbs after entity 2
+        #         for label, verb_list in zip(['moa', 'effect', 'advice', 'int'],
+        #                                     [moa_clue_verbs, effect_clue_verbs, advice_clue_verbs,
+        #                                      int_clue_verbs]):
+        #             if word in verb_list:
+        #                 feats.add(f'clue_verb_{label}_after={word}')
+        #     except:
+        #         return set()
+
+    return feats
+
+'''
+
+    '''
 
 
 ## --------- MAIN PROGRAM ----------- 
 ## --
-## -- Usage:  baseline-NER.py target-dir
+## -- Usage:  extract_features targetdir
 ## --
-## -- Extracts Drug NE from all XML files in target-dir, and writes
-## -- them in the output format requested by the evalution programs.
+## -- Extracts feature vectors for DD interaction pairs from all XML files in target-dir
 ## --
-
 
 # directory with files to process
 datadir = sys.argv[1]
 
 # process each file in directory
 for f in listdir(datadir) :
-   
-   # parse XML file, obtaining a DOM tree
-   tree = parse(datadir+"/"+f)
-   
-   # process each sentence in the file
-   sentences = tree.getElementsByTagName("sentence")
-   for s in sentences :
-      sid = s.attributes["id"].value   # get sentence id
-      spans = []
-      stext = s.attributes["text"].value   # get sentence text
-      entities = s.getElementsByTagName("entity")
-      for e in entities :
-         # for discontinuous entities, we only get the first span
-         # (will not work, but there are few of them)
-         (start,end) = e.attributes["charOffset"].value.split(";")[0].split("-")
-         typ =  e.attributes["type"].value
-         spans.append((int(start),int(end),typ))
-         
 
-      # convert the sentence to a list of tokens
-      tokens = tokenize(stext)
-      # print("TOKENS", tokens)
-      # sys.exit()
-      # extract sentence features
-      features = extract_features(tokens)
+    # parse XML file, obtaining a DOM tree
+    tree = parse(datadir+"/"+f)
 
-      # print features in format expected by crfsuite trainer
-      for i in range (0,len(tokens)) :
-         # see if the token is part of an entity
-         tag = get_tag(tokens[i], spans) 
-         print (sid, tokens[i][0], tokens[i][1], tokens[i][2], tag, "\t".join(features[i]), sep='\t')
+    # process each sentence in the file
+    sentences = tree.getElementsByTagName("sentence")
+    for s in sentences :
+        sid = s.attributes["id"].value   # get sentence id
+        stext = s.attributes["text"].value   # get sentence text
+        # load sentence entities
+        entities = {}
+        ents = s.getElementsByTagName("entity")
+        for e in ents :
+           id = e.attributes["id"].value
+           offs = e.attributes["charOffset"].value.split("-")           
+           entities[id] = {'start': int(offs[0]), 'end': int(offs[-1])}
 
-      # blank line to separate sentences
-      print()
+        # there are no entity pairs, skip sentence
+        if len(entities) <= 1 : continue
+
+        # analyze sentence
+        analysis = deptree(stext)
+
+        # for each pair in the sentence, decide whether it is DDI and its type
+        pairs = s.getElementsByTagName("pair")
+        for p in pairs:
+            # ground truth
+            ddi = p.attributes["ddi"].value
+            if (ddi=="true") : dditype = p.attributes["type"].value
+            else : dditype = "null"
+            # target entities
+            id_e1 = p.attributes["e1"].value
+            id_e2 = p.attributes["e2"].value
+            # feature extraction
+            clue_lemmas = ["affect", "effect","diminish","produce","increase","result","decrease", "induce", "enhance", "lower", "cause", "interact", "interaction", "shall", "caution", "advise", "reduce", "prolong", "not"]
+            advice_clue_verbs = ["avoid", "do not use", "contraindicated", "caution", "not recommended", "use with care", "use alternative", "discontinue", "adjust dose"]
+
+            effect_clue_verbs = ["increase", "decrease", "potentiate", "reduce", "enhance", "weaken", "alleviate", "worsen", "change", "affect"]
+
+            moa_clue_verbs = ["inhibit", "induce", "block", "activate", "alter", "modulate", "stimulate", "suppress", "compete", "bind"]
+
+            int_clue_verbs = ["interact", "co-administered", "concomitant", "combination", "administered together", "use together", "taken with"]
+
+
+            feats = extract_features1(analysis,entities,id_e1,id_e2,clue_lemmas) 
+            # resulting vector
+            if len(feats) != 0:
+              print(sid, id_e1, id_e2, dditype, "\t".join(feats), sep="\t")
+

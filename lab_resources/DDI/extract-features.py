@@ -150,6 +150,28 @@ def extract_features1(tree, entities, e1, e2, clue_lemmas) :
         feats.add("neighbor1=" + neighbor1)
         feats.add("neighbor2=" + neighbor2)
 
+        # Determine prepositions and verbs based on PoS tag
+        prepositions = [tree.get_word(tk).lower() for tk in range(tkE1 + 1, tkE2) if tree.get_tag(tk).startswith('IN')]
+        verbs = [tree.get_word(tk).lower() for tk in range(tkE1 + 1, tkE2) if tree.get_tag(tk).startswith('V')]
+        
+        feats.add("prepositions=" + "_".join(prepositions))
+        feats.add("verbs=" + "_".join(verbs))
+
+        # Add entity types
+        e1_type = entities[e1].get('type', '<none>')
+        e2_type = entities[e2].get('type', '<none>')
+        feats.add("e1_type=" + e1_type)
+        feats.add("e2_type=" + e2_type)
+
+        # Add next entity types for tkE1 and tkE2
+        for i, entity in enumerate([tkE1, tkE2]):
+            next_entity_types = []
+            for tk in range(entity + 1, min(tree.get_n_nodes(), entity + 3)):  # up to two nodes ahead
+                if tk in entities and tree.is_entity(tk, entities):
+                    next_entity_type = entities[tk].get('type', '<none>')
+                    next_entity_types.append(next_entity_type)
+            feats.add("next_entity{}_types=".format(i + 1) + "_".join(next_entity_types))
+
         # TYPES OF ENTITIES
         # feats.add(word + "is_person=")
         # 'is_person'

@@ -2,15 +2,16 @@
 
 BASEDIR=.
 
-# ./corenlp-server.sh -quiet true -port 9000 -timeout 15000  &
-# sleep 1
+./corenlp-server.sh -quiet true -port 9000 -timeout 15000  &
+sleep 1
 
 # extract features
 echo "Extracting features"
 python extract-features.py $BASEDIR/data/devel/ > devel.cod &
+python extract-features.py $BASEDIR/data/test/ > test.cod &
 python extract-features.py $BASEDIR/data/train/ | tee train.cod | cut -f4- > train.cod.cl
 
-# kill `cat /tmp/corenlp-server.running`
+kill `cat /tmp/corenlp-server.running`
 
 # train model
 echo "Training model"
@@ -33,10 +34,19 @@ python evaluator.py DDI $BASEDIR/data/devel/ devel.out > devel.stats
 # echo "Evaluating Naive Bayes results..."
 # python evaluator.py NER $BASEDIR/data/devel devel-NB.out > devel-NB.stats
 
-# # SVM
-# echo "Training SVM model..."
-# python train-svm.py model_svm.joblib vectorizer_svm.joblib < train.cod.cl
-# echo "Running SVM model..."
-# python predict-svm.py model_svm.joblib vectorizer_svm.joblib < devel.cod > devel-SVM.out
-# echo "Evaluating SVM results..."
-# python evaluator.py NER $BASEDIR/data/devel devel-SVM.out > devel-SVM.stats
+# SVM
+echo "Training SVM model..."
+python train-svm.py model_svm.joblib vectorizer_svm.joblib < train.cod.cl
+echo "Running SVM model..."
+python predict-sklearn.py model_svm.joblib vectorizer_svm.joblib < devel.cod > devel-SVM.out
+echo "Evaluating SVM results..."
+python evaluator.py DDI $BASEDIR/data/devel devel-SVM.out > devel-SVM.stats
+
+# Test
+echo "Testing Models..."
+
+python predict-sklearn.py model.joblib vectorizer.joblib < test.cod > test-NB.out
+python evaluator.py DDI $BASEDIR/data/test test-NB.out > test-NB.stats
+
+python predict-sklearn.py model_svm.joblib vectorizer_svm.joblib < test.cod > test-SVM.out
+python evaluator.py DDI $BASEDIR/data/test test-SVM.out > test-SVM.stats

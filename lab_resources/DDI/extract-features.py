@@ -172,6 +172,25 @@ def extract_features1(tree, entities, e1, e2, clue_lemmas) :
                     next_entity_types.append(next_entity_type)
             feats.add("next_entity{}_types=".format(i + 1) + "_".join(next_entity_types))
 
+
+        for tk in range(tkE1+1, tkE2):
+            lemma = tree.get_lemma(tk).lower()
+            tag = tree.get_tag(tk)
+            if lemma in clue_lemmas and tag.startswith('V'):
+                preps = [tree.get_lemma(tp) for tp in range(tk-2, tk+3) if tree.get_tag(tp).startswith('IN')]
+                feats.add("clue_verb_context=" + lemma + "_" + "_".join(preps))
+
+        # subtree_feats = []
+        # subtree = tree.get_subtree_spanning_entities(tkE1, tkE2)
+        # for node in subtree:
+        #     if tree.get_rel(node) == 'neg':
+        #         subtree_feats.append('negation_present')
+        #     if tree.get_tag(node).startswith('W'):
+        #         subtree_feats.append('conditional_structure')
+        # feats.update(subtree_feats)
+
+
+
         # TYPES OF ENTITIES
         # feats.add(word + "is_person=")
         # 'is_person'
@@ -185,22 +204,23 @@ def extract_features1(tree, entities, e1, e2, clue_lemmas) :
 
 
         # PATHS EXTENSION
-        # path1 = tree.get_up_path(tkE1, lcs)
-        # path1_nodes = []
-        # path1_edges = []
-        # for node in path1:
-        #     path1_nodes.append(tree.get_word(node))
-        #     path1_nodes.append(tree.get_lemma(node))
-        #     path1_nodes.append(tree.get_tag(node))
-        #     if node != lcs:
-        #         parent = tree.get_parent(node)
-        #         path1_edges.append(tree.get_rel(node))
-        #         if parent and node:
-        #             path1_edges.append('>' if parent == node + 1 else '<')
-        #             path1_edges.append('dir' if parent == node + 1 else 'indir')
-        # feats.add("path1_nodes=" + "<".join(path1_nodes))
-        # feats.add("path1_edges=" + "<".join(path1_edges))
-        # # path 2
+        path1 = tree.get_up_path(tkE1, lcs)
+        path1_nodes = []
+        path1_edges = []
+        for node in path1:
+            path1_nodes.append(tree.get_word(node))
+            path1_nodes.append(tree.get_lemma(node))
+            path1_nodes.append(tree.get_tag(node))
+            if node != lcs:
+                parent = tree.get_parent(node)
+                path1_edges.append(tree.get_rel(node))
+                if parent and node:
+                    path1_edges.append('>' if parent == node + 1 else '<')
+                    path1_edges.append('dir' if parent == node + 1 else 'indir')
+        feats.add("path1_nodes=" + "<".join(path1_nodes))
+        feats.add("path1_edges=" + "<".join(path1_edges))
+        
+        path2 = tree.get_up_path(tkE1, lcs)
         
         # path2_nodes = []
         # path2_edges = []
@@ -218,21 +238,21 @@ def extract_features1(tree, entities, e1, e2, clue_lemmas) :
         # feats.add("path2_edges=" + "<".join(path2_edges))
         # full path
 
-        # path = path1 + [lcs] + path2
-        # path_nodes = []
-        # path_edges = []
-        # for node in path:
-        #     path_nodes.append(tree.get_word(node))
-        #     path_nodes.append(tree.get_lemma(node))
-        #     path_nodes.append(tree.get_tag(node))
-        #     if node != lcs:
-        #         parent = tree.get_parent(node)
-        #         path_edges.append(tree.get_rel(node))
-        #         if parent and node:
-        #             path_edges.append('>' if parent == node + 1 else '<')
-        #             path_edges.append('dir' if parent == node + 1 else 'indir')
-        # feats.add("path_nodes=" + "<".join(path_nodes))
-        # feats.add("path_edges=" + "<".join(path_edges))
+        path = path1 + [lcs] + path2
+        path_nodes = []
+        path_edges = []
+        for node in path:
+            path_nodes.append(tree.get_word(node))
+            path_nodes.append(tree.get_lemma(node))
+            path_nodes.append(tree.get_tag(node))
+            if node != lcs:
+                parent = tree.get_parent(node)
+                path_edges.append(tree.get_rel(node))
+                if parent and node:
+                    path_edges.append('>' if parent == node + 1 else '<')
+                    path_edges.append('dir' if parent == node + 1 else 'indir')
+        feats.add("path_nodes=" + "<".join(path_nodes))
+        feats.add("path_edges=" + "<".join(path_edges))
 
 
         # # loop before tkE1
@@ -375,7 +395,19 @@ for f in listdir(datadir) :
             id_e1 = p.attributes["e1"].value
             id_e2 = p.attributes["e2"].value
             # feature extraction
-            clue_lemmas = ["affect", "effect","diminish","produce","increase","result","decrease", "induce", "enhance", "lower", "cause", "interact", "interaction", "shall", "caution", "advise", "reduce", "prolong", "not"]
+            # clue_lemmas = ["affect", "effect","diminish","produce","increase","result","decrease", "induce", "enhance", "lower", "cause", "interact", "interaction", "shall", "caution", "advise", "reduce", "prolong", "not"]
+            clue_lemmas = [
+                "affect", "effect", "diminish", "produce", "increase", "result", "decrease",
+                "induce", "enhance", "lower", "cause", "interact", "interaction", "shall",
+                "caution", "advise", "reduce", "prolong", "not", "improve", "worsen",
+                "prevent", "treat", "impair", "aggravate", "mitigate", "ameliorate", "alleviate",
+                "exacerbate", "suppress", "stimulate", "modify", "alter", "counteract",
+                "expose", "risk", "prevent", "contribute", "lead", "associate", "correlate",
+                "potentiate", "inhibit", "block", "activate", "compete", "disrupt",
+                "interfere", "facilitate", "implicate", "attribute", "suggest", "recommend",
+                "advocate", "challenge", "confirm", "deny", "dispute", "substantiate", "validate"
+            ]
+
             advice_clue_verbs = ["avoid", "do not use", "contraindicated", "caution", "not recommended", "use with care", "use alternative", "discontinue", "adjust dose"]
 
             effect_clue_verbs = ["increase", "decrease", "potentiate", "reduce", "enhance", "weaken", "alleviate", "worsen", "change", "affect"]

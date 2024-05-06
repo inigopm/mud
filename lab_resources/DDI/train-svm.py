@@ -37,7 +37,7 @@ if __name__ == '__main__':
     X_train = v.fit_transform(train_features)
 
     # Using a faster Linear SVM configuration
-    svm = LinearSVC(penalty='l2', dual=False, tol=0.001, C=0.1, class_weight='balanced')
+    svm = LinearSVC(penalty='l2', dual=False, tol=0.1, C=0.1, class_weight='balanced')
     svm.fit(X_train, y_train)
 
     # Save classifier and DictVectorizer
